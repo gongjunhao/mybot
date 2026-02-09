@@ -12,7 +12,20 @@
 - 文件上传：Telegram 发文件自动保存到 `WORKDIR/UPLOAD_DIR/`，并把路径作为上下文喂给 codex
 - 安全删除：`/delete` 只允许删除 `UPLOAD_DIR` 下文件
 - skills 管理：`/skills` 列表/安装/删除/查看目录
-- 输出格式化：使用 Telegram HTML（自动转义）；多行/列表类输出使用 `<pre>`
+- 输出格式化：使用 Telegram HTML（自动转义）；尽量避免 `<pre>` 以减少 “copy” 按钮出现
+- 定时任务：支持“每天上午9点…”自然语言创建，并可用 `/schedule` 管理
+- 命令菜单：启动时可自动把指令推送到 Telegram 菜单（`setMyCommands`）
+
+## 更新日志
+
+### v1.0.1
+
+- 新增：定时任务（自然语言 + `/schedule` 管理，持久化到 `LOG_DIR/schedules.json`）
+- 新增：启动时推送 bot 指令到 Telegram 菜单（`TELEGRAM_SET_COMMANDS=1`）
+
+### v1.0.0
+
+- 初版：Telegram <-> Codex CLI（exec 模式）、白名单、会话持久化、文件上传与安全删除、skills 管理、HTML 输出格式化
 
 ## 快速开始（本机 long polling）
 
