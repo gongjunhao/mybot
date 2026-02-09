@@ -57,6 +57,7 @@ func New(cmd string, args []string, dir string, logDir string) *Adapter {
 	}
 
 	skipGit := envBool("CODEX_SKIP_GIT_REPO_CHECK", filepath.Base(cmd) == "codex")
+	enableSearch := envBool("CODEX_ENABLE_SEARCH", false)
 
 	fixed := detectFixedArgs(cmd)
 	merged := make([]string, 0, len(fixed)+len(args))
@@ -65,6 +66,9 @@ func New(cmd string, args []string, dir string, logDir string) *Adapter {
 
 	if dir != "" && filepath.Base(cmd) == "codex" && !hasCdFlag(merged) {
 		merged = append([]string{"--cd", dir}, merged...)
+	}
+	if enableSearch && filepath.Base(cmd) == "codex" && !hasFlag(merged, "--search") {
+		merged = append([]string{"--search"}, merged...)
 	}
 
 	a := &Adapter{
@@ -261,6 +265,15 @@ func readHelp(cmd string) string {
 func hasCdFlag(args []string) bool {
 	for i := 0; i < len(args); i++ {
 		if args[i] == "-C" || args[i] == "--cd" {
+			return true
+		}
+	}
+	return false
+}
+
+func hasFlag(args []string, want string) bool {
+	for _, a := range args {
+		if a == want {
 			return true
 		}
 	}

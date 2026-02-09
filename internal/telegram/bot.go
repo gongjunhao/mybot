@@ -31,6 +31,9 @@ func Run(ctx context.Context, cfg config.Config, sessions *core.SessionManager) 
 
 	log.Printf("telegram: started as @%s", bot.Self.UserName)
 
+	store := NewScheduleStore(cfg)
+	go RunScheduler(ctx, bot, cfg, sessions, store)
+
 	for {
 		select {
 		case <-ctx.Done():
@@ -47,7 +50,7 @@ func Run(ctx context.Context, cfg config.Config, sessions *core.SessionManager) 
 				// Ignore silently for safety.
 				continue
 			}
-			handleMessage(ctx, bot, cfg, sessions, up.Message)
+			handleMessage(ctx, bot, cfg, sessions, store, up.Message)
 		}
 	}
 }
@@ -66,7 +69,7 @@ func userLabel(m *tgbotapi.Message) string {
 	return fmt.Sprintf("%d", u.ID)
 }
 
-func handleMessage(ctx context.Context, bot *tgbotapi.BotAPI, cfg config.Config, sessions *core.SessionManager, msg *tgbotapi.Message) {
+func handleMessage(ctx context.Context, bot *tgbotapi.BotAPI, cfg config.Config, sessions *core.SessionManager, store *ScheduleStore, msg *tgbotapi.Message) {
 	chatID := msg.Chat.ID
 
 	// Document upload support.
@@ -121,10 +124,13 @@ func handleMessage(ctx context.Context, bot *tgbotapi.BotAPI, cfg config.Config,
 			sendText(bot, chatID, st)
 			return
 		case "/help":
-			sendText(bot, chatID, "/new /cancel /status /uploads /delete <name-or-path>\n/skills [/ls]\n/skills install <git-url-or-local-path> [name]\n/skills rm <name>\n/skills path")
+			sendText(bot, chatID, "/new /cancel /status /uploads /delete <name-or-path>\n/skills [/ls]\n/skills install <git-url-or-local-path> [name]\n/skills rm <name>\n/skills path\n/schedule [/ls]\n/schedule add HH:MM <prompt>\n/schedule rm <id>\n/schedule on|off <id>\n\n自然语言示例：每天上午9点获取最新AI资讯发送给我")
 			return
 		case "/skills":
 			handleSkillsCmd(bot, cfg, chatID, cmd)
+			return
+		case "/schedule":
+			handleScheduleCmd(bot, cfg, sessions, store, chatID, cmd)
 			return
 		case "/uploads":
 			root := uploadsRoot(cfg)
@@ -155,6 +161,36 @@ func handleMessage(ctx context.Context, bot *tgbotapi.BotAPI, cfg config.Config,
 			sendText(bot, chatID, "unknown command; try /help")
 			return
 		}
+	}
+
+	// Natural-language schedule: "每天上午9点获取最新AI资讯发送给我"
+	if ts, ok := parseDailySchedules(text); ok {
+		prompt := ts[0].Prompt
+		if strings.Contains(strings.ToLower(prompt), "ai") && (strings.Contains(prompt, "资讯") || strings.Contains(prompt, "新闻")) {
+			prompt = defaultAINewsPrompt(prompt)
+		}
+
+		var tasks []ScheduledTask
+		for _, t := range ts {
+			task, err := store.UpsertDaily(chatID, t.HHMM, prompt)
+			if err != nil {
+				sendText(bot, chatID, fmt.Sprintf("schedule failed: %v", err))
+				return
+			}
+			tasks = append(tasks, task)
+		}
+
+		if len(tasks) == 1 {
+			sendText(bot, chatID, fmt.Sprintf("scheduled: id=%s daily %s", tasks[0].ID, tasks[0].DailyHHMM))
+			return
+		}
+		var b strings.Builder
+		b.WriteString("scheduled:\n")
+		for _, task := range tasks {
+			b.WriteString(fmt.Sprintf("- id=%s daily %s\n", task.ID, task.DailyHHMM))
+		}
+		sendText(bot, chatID, strings.TrimSpace(b.String()))
+		return
 	}
 
 	// Natural-language delete helper (opt-in by wording).

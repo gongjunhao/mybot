@@ -78,6 +78,7 @@ DOTENV_OVERRIDE=1 GOCACHE=/tmp/gocache go run ./cmd/mybot
 
 - `CODEX_CMD`：默认 `codex`；也可用 `/bin/bash` 等交互式 CLI 做 smoke test
 - `CODEX_ARGS`：额外参数（会附加在内部“安全 QoL 参数”之后）
+- `CODEX_ENABLE_SEARCH`：`1` 表示为 `codex` 增加全局 `--search`（“最新资讯”类需求建议开启）
 - `CODEX_DRIVER`：`exec` 或 `interactive`
   - 默认：当 `CODEX_CMD` 是 `codex` 时为 `exec`，否则为 `interactive`
 - `CODEX_SKIP_GIT_REPO_CHECK`：`1` 表示 exec 模式增加 `--skip-git-repo-check`
@@ -96,6 +97,7 @@ DOTENV_OVERRIDE=1 GOCACHE=/tmp/gocache go run ./cmd/mybot
 - `/new`：开始一个新会话（exec 模式会清掉该 chat 的持久化 thread_id）
 - `/status`：查看当前会话状态
 - `/cancel`：中断当前执行（exec 模式会对正在运行的 `codex exec` 进程发送 SIGINT）
+ - `/schedule`：定时任务管理（见下）
 
 ### 上传与删除
 
@@ -163,3 +165,22 @@ GitHub Actions 会自动：
 
 建议用 `CODEX_DRIVER=exec`。exec 模式使用 JSONL 输出，不依赖 TTY 光标能力，更适合 Telegram。
 
+## 定时任务（每天 HH:MM）
+
+支持两种方式创建定时任务：
+
+1) 自然语言（推荐）
+
+示例：
+- `每天上午9点获取最新AI资讯发送给我`
+
+2) 指令
+
+- `/schedule` 或 `/schedule ls`：列出任务
+- `/schedule add HH:MM <prompt>`：新增/覆盖同一时间点的任务
+- `/schedule rm <id>`：删除任务
+- `/schedule on <id>` / `/schedule off <id>`：启用/停用
+
+说明：
+- 定时任务持久化在 `LOG_DIR/schedules.json`
+- 触发时按机器本地时区（`time.Local`）
