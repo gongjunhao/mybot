@@ -69,6 +69,8 @@ func setBotMenuCommands(bot *tgbotapi.BotAPI) {
 		{Command: "uploads", Description: "列出最近上传文件"},
 		{Command: "delete", Description: "删除上传文件：/delete <name|path>"},
 		{Command: "skills", Description: "skills 管理：/skills ls|install|rm|path"},
+		{Command: "memory", Description: "记忆体：/memory 或 /memory ideas"},
+		{Command: "skillify", Description: "把记忆 ideas 生成/升级为 skill：/skillify <name> <idx>"},
 		{Command: "schedule", Description: "定时任务：/schedule ls|add|rm|on|off|run"},
 		{Command: "help", Description: "帮助与用法"},
 	}
@@ -147,10 +149,16 @@ func handleMessage(ctx context.Context, bot *tgbotapi.BotAPI, cfg config.Config,
 			sendText(bot, chatID, st)
 			return
 		case "/help":
-			sendText(bot, chatID, "/new /cancel /status /uploads /delete <name-or-path>\n/skills [/ls]\n/skills install <git-url-or-local-path> [name]\n/skills rm <name>\n/skills path\n/schedule [/ls]\n/schedule add HH:MM <prompt>\n/schedule rm <id>\n/schedule on|off <id>\n\n自然语言示例：每天上午9点获取最新AI资讯发送给我")
+			sendText(bot, chatID, "/new /cancel /status /uploads /delete <name-or-path>\n/skills [/ls]\n/skills install <git-url-or-local-path> [name]\n/skills rm <name>\n/skills path\n/memory [/ideas]\n/skillify <name> <ideaIndex>\n/schedule [/ls]\n/schedule add HH:MM <prompt>\n/schedule rm <id>\n/schedule on|off <id>\n\n自然语言示例：每天上午9点获取最新AI资讯发送给我")
 			return
 		case "/skills":
 			handleSkillsCmd(bot, cfg, chatID, cmd)
+			return
+		case "/memory":
+			handleMemoryCmd(bot, cfg, chatID, cmd)
+			return
+		case "/skillify":
+			handleSkillifyCmd(ctx, bot, cfg, chatID, cmd)
 			return
 		case "/schedule":
 			handleScheduleCmd(bot, cfg, sessions, store, chatID, cmd)

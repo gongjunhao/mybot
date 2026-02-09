@@ -74,6 +74,13 @@ func (a *Adapter) sendExec(h core.Handle, input string) error {
 		return nil
 	}
 
+	// Inject memory prefix (durable rules + summary) to keep context short and stable.
+	if hh.adapter != nil && hh.chatKey != "" {
+		if pfx := hh.adapter.memoryPrefix(hh.chatKey); pfx != "" {
+			prompt = pfx + "用户输入：\n" + prompt
+		}
+	}
+
 	hh.mu.Lock()
 	threadID := hh.threadID
 	hh.mu.Unlock()
@@ -207,7 +214,15 @@ func (hh *handleExec) readJSONL(r io.ReadCloser) {
 				hh.emit(core.EventStdout, txt)
 			}
 		case "turn.completed":
-			// ignore
+			if ev.Usage != nil && hh.adapter != nil {
+				hh.mu.Lock()
+				tid := hh.threadID
+				chatKey := hh.chatKey
+				hh.mu.Unlock()
+				hh.adapter.onTurnCompleted(chatKey, tid, *ev.Usage, func(s string) {
+					hh.emit(core.EventStdout, s)
+				})
+			}
 		default:
 			// ignore other event types for now
 		}
@@ -266,12 +281,19 @@ func (hh *handleExec) appendTranscript(s string) {
 }
 
 type codexJSON struct {
-	Type     string     `json:"type"`
-	ThreadID string     `json:"thread_id"`
-	Item     *codexItem `json:"item"`
+	Type     string      `json:"type"`
+	ThreadID string      `json:"thread_id"`
+	Item     *codexItem  `json:"item"`
+	Usage    *codexUsage `json:"usage"`
 }
 
 type codexItem struct {
 	Type string `json:"type"`
 	Text string `json:"text"`
+}
+
+type codexUsage struct {
+	InputTokens       int `json:"input_tokens"`
+	CachedInputTokens int `json:"cached_input_tokens"`
+	OutputTokens      int `json:"output_tokens"`
 }

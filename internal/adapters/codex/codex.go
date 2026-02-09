@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -37,6 +38,12 @@ type Adapter struct {
 
 	stateMu sync.Mutex
 	threads map[string]string // chat_id -> codex thread_id
+
+	memMu sync.Mutex
+	mem   map[string]*chatMemory // chat_id -> memory
+
+	compactMu  sync.Mutex
+	compacting map[string]bool
 }
 
 func New(cmd string, args []string, dir string, logDir string) *Adapter {
@@ -83,6 +90,7 @@ func New(cmd string, args []string, dir string, logDir string) *Adapter {
 		threads:          map[string]string{},
 	}
 	a.loadState()
+	a.loadMemory()
 	return a
 }
 
@@ -295,6 +303,18 @@ func envBool(key string, def bool) bool {
 	}
 }
 
+func envInt(key string, def int) int {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return def
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		return def
+	}
+	return n
+}
+
 func parseChatKey(sessionID string) (chatKey string, fresh bool) {
 	// Expected format from SessionManager:
 	// - "chat-<chatID>-<ts>"
@@ -371,6 +391,27 @@ func (a *Adapter) setThread(chatKey, threadID string) {
 }
 
 func (a *Adapter) clearThread(chatKey string) {
+	if chatKey == "" {
+		return
+	}
+	a.dropThread(chatKey)
+
+	// Clearing a thread means "new conversation". Keep durable rules/prefs, but reset summary + counters.
+	a.memMu.Lock()
+	if a.mem != nil {
+		if m := a.mem[chatKey]; m != nil {
+			m.Summary = ""
+			m.SkillIdeas = nil
+			m.TokensSinceCompact = 0
+			m.TurnsSinceCompact = 0
+			m.UpdatedAt = time.Now()
+			a.saveMemoryLocked()
+		}
+	}
+	a.memMu.Unlock()
+}
+
+func (a *Adapter) dropThread(chatKey string) {
 	if chatKey == "" {
 		return
 	}

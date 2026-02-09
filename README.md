@@ -15,8 +15,16 @@
 - 输出格式化：使用 Telegram HTML（自动转义）；尽量避免 `<pre>` 以减少 “copy” 按钮出现
 - 定时任务：支持“每天上午9点…”自然语言创建，并可用 `/schedule` 管理
 - 命令菜单：启动时可自动把指令推送到 Telegram 菜单（`setMyCommands`）
+- 记忆体：对话自动压缩（摘要/长期规则/偏好），并给出可沉淀为 skills 的方向
+- skills 升级闭环：`/memory ideas` + `/skillify` 一键生成/升级 `SKILL.md`
 
 ## 更新日志
+
+### v1.0.2
+
+- 新增：记忆体（对话压缩 + 长期规则/偏好注入，产物落盘 `LOG_DIR/memory.json`）
+- 新增：skills 升级闭环（`/memory`、`/skillify`，从 `skill_ideas` 生成/升级 `SKILL.md`）
+- 改进：消息渲染更接近 Markdown 预览，尽量减少 `<pre>` 导致的 “copy” 按钮
 
 ### v1.0.1
 
@@ -101,6 +109,22 @@ DOTENV_OVERRIDE=1 GOCACHE=/tmp/gocache go run ./cmd/mybot
 - `CODEX_CMD=codex`
 - `CODEX_DRIVER=exec`
 
+### 记忆体（对话压缩 + 持久规则）
+
+用于长期使用时自动“压缩对话摘要”，并把用户多次强调的内容沉淀为持久规则，避免上下文无限膨胀。
+
+- `MEMORY_ENABLE`：`1` 开启（默认 1，仅对 `CODEX_DRIVER=exec` 生效）
+- `MEMORY_TOKEN_THRESHOLD`：累计 tokens 超过该阈值触发一次压缩（默认 60000）
+- `MEMORY_TURN_THRESHOLD`：累计轮次超过该阈值触发一次压缩（默认 40）
+
+压缩产物：
+- `LOG_DIR/memory.json`：按 `chat_id` 保存 summary/rules/prefs/skill_ideas
+
+行为：
+- 达到阈值后，bot 会自动请求 codex 输出“摘要 + 持久规则 + 偏好 + 可沉淀 skills 的方向”，并在后续对话中自动注入
+- 压缩完成后会清空 codex thread（下次对话开新 thread，但带上摘要与规则）
+- `/new` 会清掉当前 thread 与摘要（但保留持久规则/偏好）
+
 ### Skills
 
 - `SKILLS_DIR`：skills 根目录
@@ -112,6 +136,9 @@ DOTENV_OVERRIDE=1 GOCACHE=/tmp/gocache go run ./cmd/mybot
 - `/status`：查看当前会话状态
 - `/cancel`：中断当前执行（exec 模式会对正在运行的 `codex exec` 进程发送 SIGINT）
  - `/schedule`：定时任务管理（见下）
+- `/memory`：查看记忆体（摘要/规则/偏好）
+- `/memory ideas`：查看可沉淀为 skill 的想法列表
+- `/skillify <name> <ideaIndex>`：把某个想法生成/升级为 skill（写入 `SKILLS_DIR/<name>/SKILL.md`）
 
 ### 上传与删除
 
@@ -198,3 +225,11 @@ GitHub Actions 会自动：
 说明：
 - 定时任务持久化在 `LOG_DIR/schedules.json`
 - 触发时按机器本地时区（`time.Local`）
+
+## skills 升级闭环（从记忆体到 SKILL.md）
+
+典型流程：
+1. 正常使用一段时间后，达到阈值会自动触发“对话压缩”，并在 `LOG_DIR/memory.json` 里产生 `skill_ideas`
+2. Telegram 输入 `/memory ideas` 查看编号
+3. 用 `/skillify <name> <ideaIndex>` 生成或升级对应 skill
+4. 用 `/skills` 验证已安装（或在 codex 中使用该 skill）

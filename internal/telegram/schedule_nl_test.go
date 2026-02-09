@@ -56,4 +56,3 @@ func TestParseDailySchedules_ZaoWan(t *testing.T) {
 		t.Fatalf("unexpected HHMMs: %q, %q", ts[0].HHMM, ts[1].HHMM)
 	}
 }
-
