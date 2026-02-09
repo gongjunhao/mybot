@@ -116,6 +116,40 @@ DOTENV_OVERRIDE=1 GOCACHE=/tmp/gocache go run ./cmd/mybot
   - 从本地目录复制安装，或 git clone 安装（`--depth 1`）
 - `/skills rm <name>`：删除 skill（只会在 skills 目录内删除）
 
+## 发版说明
+
+### 创建新版本
+
+使用 git tag 创建版本并推送，GitHub Actions 会自动构建多平台二进制文件并创建 Release：
+
+```bash
+# 创建版本标签
+git tag v1.0.0
+
+# 推送标签到远程
+git push origin v1.0.0
+```
+
+GitHub Actions 会自动：
+- 构建 Linux (amd64/arm64)、macOS (Intel/Apple Silicon)、Windows 平台的二进制文件
+- 创建 GitHub Release
+- 上传所有构建产物
+
+### 下载使用
+
+在 [Releases](https://github.com/gongjunhao/mybot/releases) 页面下载对应平台的二进制文件：
+
+- `mybot-linux-amd64`: Linux x86_64
+- `mybot-linux-arm64`: Linux ARM64
+- `mybot-darwin-amd64`: macOS Intel
+- `mybot-darwin-arm64`: macOS Apple Silicon
+- `mybot-windows-amd64.exe`: Windows x86_64
+
+下载后：
+1. 赋予执行权限（Linux/macOS）：`chmod +x mybot-*`
+2. 复制 `.env.example` 为 `.env` 并配置
+3. 运行：`./mybot-linux-amd64`（或对应平台的文件）
+
 ## 常见问题
 
 ### 1) 提示 telegram: Unauthorized

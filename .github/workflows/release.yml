@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build binaries
+        run: |
+          # Linux AMD64
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o mybot-linux-amd64 ./cmd/mybot
+          
+          # Linux ARM64
+          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o mybot-linux-arm64 ./cmd/mybot
+          
+          # macOS AMD64
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o mybot-darwin-amd64 ./cmd/mybot
+          
+          # macOS ARM64 (Apple Silicon)
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o mybot-darwin-arm64 ./cmd/mybot
+          
+          # Windows AMD64
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o mybot-windows-amd64.exe ./cmd/mybot
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            mybot-linux-amd64
+            mybot-linux-arm64
+            mybot-darwin-amd64
+            mybot-darwin-arm64
+            mybot-windows-amd64.exe
+            .env.example
+          body: |
+            ## 安装说明
+            
+            1. 下载对应平台的二进制文件
+            2. 复制 `.env.example` 为 `.env` 并配置环境变量
+            3. 运行程序
+            
+            ## 平台说明
+            - `mybot-linux-amd64`: Linux x86_64
+            - `mybot-linux-arm64`: Linux ARM64
+            - `mybot-darwin-amd64`: macOS Intel
+            - `mybot-darwin-arm64`: macOS Apple Silicon
+            - `mybot-windows-amd64.exe`: Windows x86_64
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
