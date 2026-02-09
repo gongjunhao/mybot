@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 )
 
@@ -292,7 +291,7 @@ func (a *Adapter) runCodexResumeJSON(threadID string, prompt string) (string, er
 	argv = append(argv, threadID, prompt)
 
 	cmd := exec.CommandContext(context.Background(), a.cmd, argv...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setSysProcAttr(cmd)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

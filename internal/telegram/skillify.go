@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 
@@ -193,7 +192,7 @@ func runCodexOnce(ctx context.Context, cfg config.Config, prompt string) (string
 	argv = append(argv, "exec", "--json", "--skip-git-repo-check", prompt)
 
 	c := exec.CommandContext(ctx, cmdPath, argv...)
-	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	util.SetProcessGroup(c)
 	var stdout, stderr bytes.Buffer
 	c.Stdout = &stdout
 	c.Stderr = &stderr
