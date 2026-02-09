@@ -42,6 +42,7 @@ DOTENV_OVERRIDE=1 GOCACHE=/tmp/gocache go run ./cmd/mybot
 - `TELEGRAM_ALLOWLIST`：允许使用的 `chat_id`（必填，逗号分隔）
 - `TELEGRAM_LOG_UNKNOWN`：`1` 表示把“未在白名单的 chat_id”打到服务端日志（用于首次获取 chat_id）
 - `TELEGRAM_HIDE_STATUS`：`1` 表示不在 Telegram 输出中显示内部状态行（比如 resumed/started）
+- `TELEGRAM_SET_COMMANDS`：`1` 表示启动时调用 Telegram `setMyCommands`，让指令在聊天输入框的菜单里可见（默认 1）
 
 ### 代理（国内常用）
 

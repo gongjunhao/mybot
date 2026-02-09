@@ -25,6 +25,10 @@ func Run(ctx context.Context, cfg config.Config, sessions *core.SessionManager) 
 	}
 	bot.Debug = false
 
+	if cfg.SetCommands {
+		setBotMenuCommands(bot)
+	}
+
 	u := tgbotapi.NewUpdate(0)
 	u.Timeout = 30
 	updates := bot.GetUpdatesChan(u)
@@ -52,6 +56,25 @@ func Run(ctx context.Context, cfg config.Config, sessions *core.SessionManager) 
 			}
 			handleMessage(ctx, bot, cfg, sessions, store, up.Message)
 		}
+	}
+}
+
+func setBotMenuCommands(bot *tgbotapi.BotAPI) {
+	// Show commands in Telegram's menu (like OpenClaw-style UX).
+	// Best-effort: don't fail startup if Telegram rejects the request.
+	cmds := []tgbotapi.BotCommand{
+		{Command: "new", Description: "新会话（清空并重新开始）"},
+		{Command: "status", Description: "查看当前会话状态"},
+		{Command: "cancel", Description: "中断当前任务（Ctrl+C）"},
+		{Command: "uploads", Description: "列出最近上传文件"},
+		{Command: "delete", Description: "删除上传文件：/delete <name|path>"},
+		{Command: "skills", Description: "skills 管理：/skills ls|install|rm|path"},
+		{Command: "schedule", Description: "定时任务：/schedule ls|add|rm|on|off|run"},
+		{Command: "help", Description: "帮助与用法"},
+	}
+	_, err := bot.Request(tgbotapi.NewSetMyCommands(cmds...))
+	if err != nil {
+		log.Printf("telegram: setMyCommands failed: %v", err)
 	}
 }
 

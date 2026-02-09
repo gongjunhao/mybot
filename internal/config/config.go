@@ -15,6 +15,7 @@ type Config struct {
 	Allowlist     map[int64]struct{}
 	LogUnknown    bool
 	HideStatus    bool
+	SetCommands   bool
 
 	// CodexCmd/CodexArgs define the interactive CLI command to spawn.
 	// Defaults to "codex". Args are appended after built-in fixed args in code.
@@ -57,6 +58,7 @@ func Load() (Config, error) {
 	cfg.Allowlist = al
 	cfg.LogUnknown = envBool("TELEGRAM_LOG_UNKNOWN", false)
 	cfg.HideStatus = envBool("TELEGRAM_HIDE_STATUS", false)
+	cfg.SetCommands = envBool("TELEGRAM_SET_COMMANDS", true)
 
 	cfg.CodexCmd = strings.TrimSpace(os.Getenv("CODEX_CMD"))
 	cfg.CodexArgs = splitArgs(os.Getenv("CODEX_ARGS"))
