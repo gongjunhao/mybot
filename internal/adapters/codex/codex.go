@@ -190,7 +190,7 @@ func (a *Adapter) newCmd(ctx context.Context, setpgid bool) *exec.Cmd {
 	if setpgid {
 		// Put in its own process group so we can send signals (Ctrl+C) to the whole tree.
 		// Note: when using PTY, pty.Start/forkpty may already create a new session; forcing Setpgid can fail on macOS.
-		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		setSysProcAttr(cmd)
 	}
 	return cmd
 }
@@ -411,10 +411,8 @@ func (a *Adapter) Stop(h core.Handle) error {
 			return nil
 		}
 		if hh.useProcPG {
-			pgid, err := syscall.Getpgid(hh.cmd.Process.Pid)
+			err := killProcessGroup(hh.cmd.Process.Pid)
 			if err == nil {
-				// SIGINT first (like Ctrl+C)
-				_ = syscall.Kill(-pgid, syscall.SIGINT)
 				return nil
 			}
 		}

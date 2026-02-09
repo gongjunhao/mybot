@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"syscall"
 	"time"
 
 	"mybot/internal/core"
@@ -100,7 +99,7 @@ func (a *Adapter) sendExec(h core.Handle, input string) error {
 
 	cmd := exec.CommandContext(context.Background(), hh.cmdPath, argv...)
 	// Put in its own process group so /cancel can interrupt the whole tree.
-	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	setSysProcAttr(cmd)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -156,9 +155,8 @@ func (a *Adapter) stopExec(h core.Handle) error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
-	pgid, err := syscall.Getpgid(cmd.Process.Pid)
+	err := killProcessGroup(cmd.Process.Pid)
 	if err == nil {
-		_ = syscall.Kill(-pgid, syscall.SIGINT)
 		return nil
 	}
 	return cmd.Process.Signal(os.Interrupt)
